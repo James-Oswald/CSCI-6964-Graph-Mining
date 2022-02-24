@@ -1,3 +1,5 @@
+
+
 import networkx as nx
 import matplotlib.pyplot as plt
 import random
@@ -15,51 +17,39 @@ D = nx.read_edgelist("out.link-dynamic-simplewiki.data", create_using=nx.DiGraph
 
 ################################################################################
 # (a) Number of weakly connected components.
-num_weak_comps = 0
 
-#num_weak_comps = len(list(nx.weakly_connected_components(D))) #303
-counter = 0
-S = {}
-for v in G.nodes:
-    S[v] = counter
-    counter += 1
-
-updates = 1
-while updates > 0:
-    updates = 0
-    for v in G.nodes:
-        for u in chain(G.successors(v),G.predecessors(v)):
-        if S[u] > S[v]:
-            S[v] = S[u]
-            updates += 1
-
+weakComponents = list(nx.weakly_connected_components(D))
+num_weak_comps = len(weakComponents)
 print("Num weak comps:", num_weak_comps)
-
-exit(0) #TEMP
 
 ################################################################################
 # (b) Number of strongly connected components.
-num_strong_comps = 0
 
-# TODO: determine number of strongly connected components
-
+strongComponents = list(nx.strongly_connected_components(D))
+num_strong_comps = len(strongComponents)
 print("Num strong comps:", num_strong_comps)
 
 ################################################################################
 # (c) Number of trivial strongly connected components.
-num_trivial_strong_comps = 0
-
-# TODO: determine number of strongly connected components
-
+num_trivial_strong_comps = len([i for i in strongComponents if len(i) == 1])
 print("Num trivial strong comps:", num_trivial_strong_comps)
 
 ################################################################################
 # (d) Number of vertices in each of SCC, IN, and OUT.
+
 num_in_SCC = 0
 num_in_IN = 0
 num_in_OUT = 0
 
-# TODO: determine sizes of SCC, IN, and OUT for bowtie structure
+
+scc = max(strongComponents, key=len)
+sccElm = list(scc)[0] #An arbitrary element in the scc
+inNodes = nx.ancestors(D, sccElm).difference(scc)
+outNodes = nx.descendants(D, sccElm).difference(scc)
+
+num_in_SCC = len(scc)
+num_in_IN = len(inNodes)
+num_in_OUT= len(outNodes)
 
 print("Num in SCC:", num_in_SCC)
 print("Num in IN:", num_in_IN)
@@ -70,7 +60,33 @@ print("Num in OUT:", num_in_OUT)
 num_in_tendrils = 0
 num_in_tubes = 0
 
-# TODO: determine total number of vertices in tendrils and tubes
+print("Generating ttds")
+outside = set(D.nodes).difference(scc.union(inNodes).union(outNodes)) #All the nodes not in in, out, or scc
+
+#Set containing components that are in tendrils, tubes, or disconnects, we need to classify each element in this
+ttds = list(nx.weakly_connected_components(D.subgraph(outside))) 
+
+print("Generating helper graphs")
+nodeSet = set(D.nodes)
+undirectedD = D.to_undirected(as_view=True)  
+DwithoutIn = undirectedD.subgraph(nodeSet.difference(inNodes))
+DwithoutOut = undirectedD.subgraph(nodeSet.difference(outNodes))
+
+print("Computing Tendrils and tubes")
+tendrils = []
+tubes = []
+for ttd in ttds:
+    ttdElm = list(ttd)[0] #An arbitrary element in the tendril, tube, or disconnected component we're classifying 
+    connectsThroughIn = nx.has_path(DwithoutIn, ttdElm, sccElm)
+    connectsThroughOut = nx.has_path(DwithoutOut, ttdElm, sccElm)
+    if connectsThroughIn and connectsThroughOut: #if we can get to the scc from both IN and OUT we are a tube
+        tubes.append(ttdElm)
+    elif connectsThroughIn or connectsThroughOut: #if we can connect via IN or(xor) OUT we are a tendril 
+        tendrils.append(ttdElm)
+    #if we cant connect to  SCC at all, we are disconnected
+
+num_in_tendrils = sum([len(tendril) for tendril in tendrils])
+num_in_tubes = sum([len(tube) for tube in tubes])
 
 print("Num in tendrils:", num_in_tendrils)
 print("Num in tubes:", num_in_tubes)
@@ -80,11 +96,13 @@ print("Num in tubes:", num_in_tubes)
 num_tendrils = 0
 num_tubes = 0
 
-# TODO: determine number of distinct tendrils and number of distinct tubes
+num_tendrils = len(tendrils)
+num_tubes = len(tubes)
 
 print("Num tendrils:", num_tendrils)
 print("Num tubes:", num_tubes)
 
+exit(0)
 ################################################################################
 # (g) CSCI-6964 only: Number of trivial tendrils and tubes
 num_trivial_tendrils = 0
