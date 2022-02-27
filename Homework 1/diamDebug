@@ -1,0 +1,47 @@
+
+import networkx as nx
+import random
+import math
+
+
+#D = nx.read_edgelist("out.link-dynamic-simplewiki.data", create_using=nx.DiGraph(), data=(("exists",int),("timestamp",int)))
+D = nx.read_edgelist("p2p-Gnutella31.data", create_using=nx.DiGraph())
+G = D.to_undirected(as_view=True)
+
+mainComponent = list(max(nx.connected_components(G), key=len))
+
+#Precompute Neighbors to speed up the BFS
+neighbors = {}
+for v in mainComponent:
+    neighbors[v] = set(G.neighbors(v))
+
+iterations = 100
+pathLenSum = 0
+startNode = random.choice(mainComponent)
+progress = 0
+
+print("Starting DFS")
+for _ in range(iterations):
+    progress += 1
+    if progress % 5 == 0:
+        print(str(progress) + "% done computing Diameter")
+    #preform a custom BFS that keeps track of search depth
+    visited = set()
+    curLevel = set([startNode])
+    lastLevel = set()
+    depth = 0
+    while len(curLevel) > 0:
+        depth += 1
+        nextLevel = set()
+        for u in curLevel:
+            visited.add(u)
+            for v in neighbors[u]:
+                if v not in visited:
+                    nextLevel.add(v)
+        lastLevel = curLevel.copy()
+        curLevel = nextLevel.copy()
+    pathLenSum = max(pathLenSum, depth) 
+    startNode = next(iter(lastLevel))
+diameter = pathLenSum #/ iterations
+
+print("Diameter estimate:", diameter)
