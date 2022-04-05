@@ -1,0 +1,1 @@
+placeholder, this folder contains images for part 2
