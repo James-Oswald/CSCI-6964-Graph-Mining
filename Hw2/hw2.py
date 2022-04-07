@@ -41,27 +41,27 @@ configurationModel: nx.Graph = nx.configuration_model(degreeSequence, create_usi
 #     maxLabels: "set(int)" = set(label for label, count in labelCounts.items() if count == maxCount)
 #     return maxLabels
 
-def display(graph: nx.Graph, comms, figureName:str):
+def display(graph: nx.Graph, contiguousCommunities, figureName:str):
     #Identify contiguous communities   
-    contiguousCommunities = []
-    visited = set()
-    for n in graph.nodes:   #Just doing a BFS to find contiguous communities
-        if n in visited:
-            continue
-        curLevel = [n]
-        members = set()
-        members.add(n)
-        while len(curLevel) > 0:
-            nextLevel = []
-            for curLevelNode in curLevel:
-                for neighbor in nx.neighbors(graph, curLevelNode):
-                    if neighbor not in visited and comms[neighbor] == comms[n]:
-                    #if neighbor not in visited and graph.nodes[neighbor]["C"] == graph.nodes[n]["C"]:
-                        visited.add(neighbor)
-                        nextLevel.append(neighbor)
-                        members.add(neighbor)
-            curLevel = nextLevel
-        contiguousCommunities.append(members)
+    # contiguousCommunities = []
+    # visited = set()
+    # for n in graph.nodes:   #Just doing a BFS to find contiguous communities
+    #     if n in visited:
+    #         continue
+    #     curLevel = [n]
+    #     members = set()
+    #     members.add(n)
+    #     while len(curLevel) > 0:
+    #         nextLevel = []
+    #         for curLevelNode in curLevel:
+    #             for neighbor in nx.neighbors(graph, curLevelNode):
+    #                 if neighbor not in visited and comms[neighbor] == comms[n]:
+    #                 #if neighbor not in visited and graph.nodes[neighbor]["C"] == graph.nodes[n]["C"]:
+    #                     visited.add(neighbor)
+    #                     nextLevel.append(neighbor)
+    #                     members.add(neighbor)
+    #         curLevel = nextLevel
+    #     contiguousCommunities.append(members)
 
     #Contract contiguous communities
     contractedGraph = graph.copy()
@@ -74,12 +74,14 @@ def display(graph: nx.Graph, comms, figureName:str):
         contractedGraph.nodes[nodes[0]]["Size"] = len(nodes)
 
     #Draw communities:
-    largeCommunities = [cc for cc in contractedGraph if contractedGraph.nodes[cc]["Size"] >= 5]
+    largeCommunities = [cc for cc in contractedGraph if contractedGraph.nodes[cc]["Size"] >= 1]
     largeCommunitySubgraph = contractedGraph.subgraph(largeCommunities)
     nodeSizes = [contractedGraph.nodes[cc]["Size"] for cc in largeCommunitySubgraph]
-    nodeColors = [int(comms[cc]) for cc in largeCommunitySubgraph]
-    nx.draw(largeCommunitySubgraph, node_size=nodeSizes, node_color=nodeColors)
+    nodeLabels = {cc: str(contractedGraph.nodes[cc]["Size"]) for cc in largeCommunitySubgraph}
+    nodeColors = [contractedGraph.nodes[cc]["Size"] for cc in largeCommunitySubgraph]
+    nx.draw(largeCommunitySubgraph, node_size=nodeSizes, node_color=nodeColors, labels=nodeLabels)
     plt.savefig(figureName)
+    plt.clf()
     
 
 # def labelProp(graph: nx.Graph):
@@ -139,4 +141,10 @@ def labelProp(G):
 #labelProp(G)
 
 comms = nx.community.label_propagation_communities(G)
-display(G, comms, "./Pics/test.png")
+display(G, comms, "./Pics/raw.png")
+
+comms = nx.community.label_propagation_communities(erdosRenyi)
+display(erdosRenyi, comms, "./Pics/er.png")
+
+comms = nx.community.label_propagation_communities(configurationModel)
+display(configurationModel, comms, "./Pics/config.png")
